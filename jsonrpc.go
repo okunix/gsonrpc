@@ -2,6 +2,8 @@ package gsonrpc
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
 )
 
 type Request struct {
@@ -88,4 +90,18 @@ func (j *JsonRPC) ProcessRequest(request []byte) []byte {
 
 	resp, _ := json.Marshal(responseObject)
 	return resp
+}
+
+func (j *JsonRPC) Handler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		req, _ := io.ReadAll(r.Body)
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(j.ProcessRequest(req))
+	})
+}
+
+func (j *JsonRPC) ListenAndServe(addr string) {
+	mux := http.NewServeMux()
+	mux.Handle("POST /{$}", j.Handler())
+	http.ListenAndServe(addr, mux)
 }
